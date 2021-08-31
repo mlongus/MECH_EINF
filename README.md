@@ -1,2 +1,2 @@
 # MECH_EINF
-MECH_EINF unterlagen Laboren 
+MECH_EINF UNterlagen und Codes zu den Laboren im Modul 
