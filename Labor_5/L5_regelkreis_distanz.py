@@ -62,7 +62,8 @@ userinput = input("Auf welche Distanz soll gefahren werden?\nWert zwischen 30 mm
 set_distance = float(userinput)
 
 # Save results in CSV File
-filename = "/home/stud/Desktop/wegdiagramm_distanz" \
+# filename = "/home/stud/Desktop/wegdiagramm_drehzahl" \
+filename = "wegdiagramm_drehzahl" \
            + str(time.asctime(time.localtime(time.time()))).replace(":", "_") \
            + ".csv"
 csvresult = open(filename, "w")                                 # Open and (over-)write ("w") file
