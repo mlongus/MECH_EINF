@@ -9,8 +9,6 @@
 import pigpio
 import signal
 import grovepi
-from Motor_Off import Motor_Off
-
 
 """ Initialization """
 def receiveSignal(signalNumber, frame):
@@ -100,5 +98,3 @@ try:
 
 except KeyboardInterrupt:
     pass
-# Turn off DCmotor
-turn_motor_off()
