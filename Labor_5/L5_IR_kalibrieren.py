@@ -8,6 +8,7 @@
 ## Import Packages
 import pigpio
 import signal
+import grovepi
 from Motor_Off import Motor_Off
 
 
@@ -43,7 +44,7 @@ ncycle = 2                     # Number of measurement cycles []
 
 
 """ Save results in CSV File """
-filename = "/home/stud/mech/" + "sensorkalibrierung.csv"    # The filename can be edited
+filename = "sensorkalibrierung.csv"    # The filename can be edited
 csvresult = open(filename, "w")                             # Open and (over-)write ("w") file
 csvresult.write("Spannung (V); Abstand (mm)" + "\n")         # Write titles
 csvresult.close                                             # Close file
