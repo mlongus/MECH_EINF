@@ -1,60 +1,82 @@
-""" Labor 3, Parksensor, MECH_EINF Module WI HSLU T&A
-    author:         Raphael Andonie, Simon van Hemert
-    date:           2020-04-06
-    organization:   HSLU T&A """
+"""-----------------------------------------------------
+¦    File name: L3_Park_Sensor.py                       ¦
+¦    Version: 1.0                                       ¦
+¦    Author: Jonas Josi                                 ¦
+¦    Date created: 2024/04/10                           ¦
+¦    Last modified: 2024/04/10                          ¦
+¦    Python Version: 3.7.3                              ¦
+------------------------------------------------------"""
 
-## Import Packages
-import signal
-import os
+# ----------- import external Python module -----------
 import grovepi
 
+# ----------- global constant -----------
+ULTRA_SONIC_PORT = 5  # Connect Ultra Sonic Ranger to digital Port D5 on GrovePi
+LED_BAR_PORT = 2  # Connect LED bar to digital Port D2 on GrovePi
+LED_BAR_LEVELS = 10  # Number of LEDs on LED bar
+LED_BAR_DIST_MAX_LEVEL = 40  # Distance in [cm], represented by all leds on the LED bar lighting up
 
-""" Initialization """
-def receiveSignal(signalNumber, frame):
-    """ When any error signal is received:
-    - print signal number,
-    - turn of ledBar,
-    - and exit """
-    print("Received: ", signalNumber)
-    print("Exit Python!")
-    # Turn of LED bar
-    grovepi.ledBar_setLevel(port_ledbar, 0)
-    os._exit(0)
+# ----------- global variable -----------
+previous_distance = None # last measured distance in [cm]
+led_level = 0
 
+# ----------- function definition -----------
+def get_ultra_sonic_distance(port, n_measurement=1, return_on_change = False):
+    """
+    Returns the measured distance of the ultrasonic sensor in centimeters.
 
-# When a signal is received, activate the (above) receiveSignal method.
-signal.signal(signal.SIGINT, receiveSignal)
+    Parameters
+    ----------
+    port : int
+        digital port of GrovePi connected to the ultrasonic sensor.
+    n_measurement : int, optional
+        Number of measurements to be taken. If greater than 1, the mean value of all measurements is returned.
+    return_on_change : bool, optional
+        If True, the function only returns a value if the measured distance differs from the last measured distance.
 
-# Set sensor ports and settings
-port_ledbar = 2  # Put Ledbar to grovepi digital connector D2
-port_ranger = 5  # Put Ultra Sonic Ranger to grovepi digital connector D5
+    Returns
+    -------
+    int or None
+        The measured distance in centimeters, or None if return_on_change is True and the distance has not changed.
+    """
 
-# Initialize LED Bar
-grovepi.ledBar_init(port_ledbar, 0)
-grovepi.ledBar_orientation(port_ledbar, 1)
-grovepi.pinMode(port_ledbar, "OUTPUT")
+    distance_sum = 0
+    n_measurement = int(n_measurement)
 
-# Settings
-range_max = 30              # Max range
-ledbar_nof_levels = 10      # Number of LEDs
-lvl = 0                     # Starting level
-
-
-""" Endless loop """
-print("Start Event Log ...")
-while True:
-    dist = grovepi.ultrasonicRead(port_ranger)  # Measure distance
-
-    # Find the appropriate number of LEDs, set to 0 if out of range.
-    if dist <= range_max:
-        lvl = int(- (ledbar_nof_levels / range_max) * dist + ledbar_nof_levels)
+    if n_measurement >= 1:
+        # sum the output of n measurement(s)
+        for _ in range(n_measurement):
+            distance_sum += grovepi.ultrasonicRead(port)  # get distance from ultra sonic sensor
+        _distance = distance_sum / n_measurement # calculate mean value of all n measurements
+        _distance = int(round(_distance, 0))
     else:
-        lvl = 0
+        _distance = grovepi.ultrasonicRead(port)  # get distance from ultra sonic sensor
 
-    # Set the LEDs
-    if 0 <= lvl <= ledbar_nof_levels:
-        grovepi.ledBar_setLevel(port_ledbar, lvl)
+    if return_on_change and _distance == previous_distance:
+        return
+    else:
+        return _distance
 
-    # Print the LED level and current measured distance
-    print(lvl, "<->", dist)
 
+# ----------- main code -----------
+if __name__ == "__main__":
+    # Initialize LED bar
+    grovepi.ledBar_init(LED_BAR_PORT, 0)
+    grovepi.ledBar_orientation(LED_BAR_PORT, 1)
+    grovepi.pinMode(LED_BAR_PORT, "OUTPUT")
+
+    try:
+        # endless loop
+        while True:
+            distance = get_ultra_sonic_distance(ULTRA_SONIC_PORT, 5, True)
+            if distance:
+                led_level = LED_BAR_LEVELS - int(min(LED_BAR_LEVELS / LED_BAR_DIST_MAX_LEVEL * distance, LED_BAR_LEVELS))
+                # Print distance value from the Ultrasonic sensor and level of led bar
+                print(distance, 'cm', "--->", led_level, "LEDs")
+                grovepi.ledBar_setLevel(LED_BAR_PORT, led_level)
+                previous_distance = distance
+    except KeyboardInterrupt:
+        # Turn off LED bar
+        grovepi.ledBar_setLevel(LED_BAR_PORT, 0)
+        print("\nExit Python!")
+        exit(0)

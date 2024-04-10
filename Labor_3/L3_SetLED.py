@@ -1,56 +1,44 @@
-""" Labor 3, Parksensor, MECH_EINF Module WI HSLU T&A
-    author:         Raphael Andonie, Simon van Hemert
-    date:           2020-04-06
-    organization:   HSLU T&A """
+"""-----------------------------------------------------
+¦    File name: L3_SetLED.py                            ¦
+¦    Version: 1.0                                       ¦
+¦    Author: Jonas Josi                                 ¦
+¦    Date created: 2024/04/10                           ¦
+¦    Last modified: 2024/04/10                          ¦
+¦    Python Version: 3.7.3                              ¦
+------------------------------------------------------"""
 
-## Import Packages
-import signal
-import os
+# ----------- import external Python module -----------
 import grovepi
 
+# ----------- global constant -----------
+LED_BAR_PORT = 2  # Connect LED bar to digital Port D2 on GrovePi
 
-""" Initialization """
-def receiveSignal(signalNumber, frame):
-    """ When any error signal is received:
-    - print signal number,
-    - turn of ledBar,
-    - and exit """
-    print("Received: ", signalNumber)
-    print("Exit Python!")
-    # Turn of LED bar
-    grovepi.ledBar_setLevel(port_ledbar, 0)
-    os._exit(0)
+# ----------- main code -----------
+if __name__ == "__main__":
+    # Initialize LED bar
+    grovepi.ledBar_init(LED_BAR_PORT, 0)
+    grovepi.ledBar_orientation(LED_BAR_PORT, 1)
+    grovepi.pinMode(LED_BAR_PORT, "OUTPUT")
 
+    try:
+        # endless loop
+        while True:
+            # Ask for a user input between 0 and 10
+            user_input = input('\nGeben sie eine ganze Zahl mit Wert zwischen 0 und 10 ein: ')
+            valid_user_input = False
 
-# When a signal is received, activate the (above) receiveSignal method.
-signal.signal(signal.SIGINT, receiveSignal)
+            if user_input.isdigit():
+                user_input = int(user_input)  # cast/convert user input to integer
+                if 0 <= user_input <= 10:
+                    valid_user_input = True
 
-# Set sensor ports and settings
-port_ledbar = 2     # Put Ledbar to grovepi digital connector D2
-
-# Initialize LED Bar
-grovepi.ledBar_init(port_ledbar, 0)
-grovepi.ledBar_orientation(port_ledbar, 1)
-grovepi.pinMode(port_ledbar, "OUTPUT")
-
-# Settings
-ledbar_nof_levels = 10      # Number of LEDs
-
-
-""" Endless loop """
-print("Start Event Log ...")
-while True:
-    # Ask for a user input between 0 and 10
-    userinput = input('Geben sie einen Wert zwischen 0 und 10 ein: ')
-    # Save as integer
-    userinput = int(userinput)
-
-    # Set ledbar level
-    if userinput >= 0 and userinput <= ledbar_nof_levels:
-        grovepi.ledBar_setLevel(port_ledbar, userinput)
-        print(userinput)		# Print the given value to screen
-    else:
-        print("Wert auserhalb des gültigen Bereichs")
-
-
-
+            if valid_user_input:
+                grovepi.ledBar_setLevel(LED_BAR_PORT, user_input)
+                print("-" * 10, user_input, "LEDs and LED-Bar eingeschalten", "-" * 10)
+            else:
+                print("Eingegebner Wert ausserhalb des gültigen Bereichs")
+    except KeyboardInterrupt:
+        # Turn off LED bar
+        grovepi.ledBar_setLevel(LED_BAR_PORT, 0)
+        print("\nExit Python!")
+        exit(0)
