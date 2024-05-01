@@ -1,82 +1,106 @@
-""" Labor 5, Regelkreis, MECH_EINF Module WI HSLU T&A
-    author:         Simon van Hemert
-    date:           2020-04-22
-    organization:   HSLU T&A """
+"""-----------------------------------------------------
+¦    File name: L4_DCmotor_Measurement.py               ¦
+¦    Version: 1.0                                       ¦
+¦    Author: Jonas Josi                                 ¦
+¦    Date created: 2024/05/01                           ¦
+¦    Last modified: 2024/05/01                          ¦
+¦    Python Version: 3.7.3                              ¦
+------------------------------------------------------"""
 
-# TODO !!! Vor dem eigentlichen Starten des Programmes muss zuerst folgender Befehl ausgefuehrt werden: sudo pigpiod
-
-## Import Packages
-import os
-import pigpio
-import signal
+# ----------- import external Python module -----------
+import pigpio  # library to create hardware-based PWM signals on Raspberry Pi
 import time
-from Motor_Off import Motor_Off
+
+# ----------- global constant -----------
+# assign motor driver interface to GPIO's of Raspberry Pi
+M1 = 20
+M2 = 21
+D1 = 26  # enable/disable output pins M1, M2
+
+# settings
+VOLTAGE = 6  # *** CHANGE ME *** Voltage for DC motor [V] between 0 und 12 V (Voltage from power supply is always 12 V)
+MOVEMENT_DRIVE_TIME = 2  # *** CHANGE ME *** Time in [s] to drive the DC motor for each movement
+MOVEMENT_STOP_TIME = 2  # *** CHANGE ME ***  Pause in [s] between two consecutive movements (up/down) of slide on linear guideway
+CYCLE_START_DIRECTION = 0  # *** CHANGE ME ***  Direction (0 or 1) of first movement of slide on linear guideway
+CYCLE_NUMBER = 3  # *** CHANGE ME ***  Number of cycles (movement of slide on linear guideway in one direction, followed by movement in the opposite direction)
+
+# auxiliary parameters
+MAX_VOLTAGE = 12  # supply voltage of motor driver is 12 V (which equals the max. rated voltage of the DC motor)
+PWM_FREQUENCY = 4000  # Hz
+PWM_DUTYCYCLE_RESOLUTION = 8  # 8 bit -> value range of PWM_DUTYCYCLE is between 0 (OFF) and 255 (FULLY ON)
+PWM_DUTYCYCLE = round((2 ** PWM_DUTYCYCLE_RESOLUTION - 1) / MAX_VOLTAGE * VOLTAGE, 0)  # PWM_DUTYCYCLE from 0 (OFF) to 255 bit (FULLY ON)
 
 
-""" Initialization """
-def receiveSignal(signalNumber, frame):
-    """ When any error signal is received:
-    - print signal number,
-    - turn of Motor,
-    - and exit """
-    print("Received: ", signalNumber)
-    print("Exit Python!")
-    Motor_Off.turn_motor_off()          # Turn off DCmotor
-    os._exit(0)
+# ----------- function definition -----------
+def stop_motor():
+    """
+    Set state of both output pins of the motor driver (M1, M2) to LOW (0 V).
+    Then disable the motor driver output pins (M1, M2).
+    """
+    # enable motor driver output pins (M1 and M2)
+    pi1.write(D1, 1)
+
+    # set state of motor driver outputs (M1 and M2) to low (0 V)
+    pi1.write(M1, 0)
+    pi1.write(M2, 0)
+
+    # disable motor driver output pins (M1 and M2)
+    pi1.write(D1, 0)
+
+    print("\nMotor stopped")
 
 
-# When a signal is received, activate the (above) receiveSignal method.
-signal.signal(signal.SIGINT, receiveSignal)
+# ----------- main code -----------
+if __name__ == "__main__":
+    # initialize pigpio
+    pi1 = pigpio.pi()  # Create an Object of class pigpio.pi
 
-# Initialize Grovepi
-pi1 = pigpio.pi()    # Creates an Object from pi-class.
+    # enable motor driver output pins (M1 and M2)
+    pi1.write(D1, 1)
 
-# Set ports
-A1 = 20         # A  or M1
-A2 = 21         # A/ or M2
-D2 = 26         # N/ -> Turn on the motordriver A A/
+    # set frequency of PWM signal on outputs "M1" and "M2"
+    pi1.set_PWM_frequency(M1, PWM_FREQUENCY)
+    pi1.set_PWM_frequency(M2, PWM_FREQUENCY)
 
-# Settings
-voltage = 6         # Voltage for DC motor [V] between 0 und 12 V (Voltage from power supply is always 12 V)
-direction = 1       # Direction [-], 0 or 1
-stoptime = 0.5        # Pause [s] between driving back and forth . standad = 1 [s]
-drivetime = 1       # Time [s] for each step of stepmotor. standard = 2 [s]
-cycle_number = 3    # Number of cycles to go through
+    """ start measurement """
+    try:
+        direction = CYCLE_START_DIRECTION
+        cycle = 0
+        # endless loop
+        while cycle < CYCLE_NUMBER:
+            if direction == 0:
+                # set output "M2" on motor driver to low (0 V)
+                pi1.write(M2, 0)
+                # drive motor
+                pi1.set_PWM_dutycycle(M1, PWM_DUTYCYCLE)
+                time.sleep(MOVEMENT_DRIVE_TIME)
+                # stop motor
+                pi1.set_PWM_dutycycle(M1, 0)
+            elif direction == 1:
+                # set output "M1" on motor driver to low (0 V)
+                pi1.write(M1, 0)
+                # drive motor
+                pi1.set_PWM_dutycycle(M2, PWM_DUTYCYCLE)
+                time.sleep(MOVEMENT_DRIVE_TIME)
+                # stop motor
+                pi1.set_PWM_dutycycle(M2, 0)
 
-# Initialisation
-dutycycle = round(21.25 * voltage, 0)   # Calculate PWM dutycycle from 0 (OFF) to 255 bit (FULLY ON)
-cycle = 0
+            direction = not direction  # change direction
+            cycle += 0.5
 
+            # check if last movement of measurement is not already done
+            if cycle != CYCLE_NUMBER:
+                # wait between movements
+                time.sleep(MOVEMENT_STOP_TIME)
 
-""" Run Motor """
-try:
-    # Turn on the motordriver -> 1
-    pi1.write(D2, 1)
+        stop_motor()
+        pi1.stop()  # Terminate the connection to the pigpiod instance and release resources
+        print("Exit Python")
+        exit(0)  # exit python with exit code 0
 
-    while cycle < cycle_number:         # For cycle_number cycles:
-        if direction == 0:
-            # Set PWM on A1
-            pi1.set_PWM_frequency(A1, 4000)         # Frequency of the PWM Signals [Hz] -> 4000
-            pi1.set_PWM_dutycycle(A1, dutycycle)    # Set the calculated dutycycle
-            # Set 0 on A2
-            pi1.write(A2, 0)
-        elif direction == 1:
-            # Set 0 on A1
-            pi1.write(A1, 0)                        # Set the other chanel to 0
-            # Set PWM on A2
-            pi1.set_PWM_frequency(A2, 4000)         # Frequency of the PWM Signals [Hz] -> 4000
-            pi1.set_PWM_dutycycle(A2, dutycycle)    # Set the calculated dutycycle
-        time.sleep(drivetime)                       # Drive for drivetime [s]
-
-        # Turn of motor to wait:
-        pi1.write(A1, 0)
-        pi1.write(A2, 0)
-
-        cycle += 0.5                # Increment cycle counter
-        direction = not direction   # Invert direction
-        time.sleep(stoptime)        # Wait for stoptime [s]
-
-except KeyboardInterrupt:
-    pass
-
-Motor_Off.turn_motor_off()  # Turn off DCmotor
+    # detect exception - usually triggered by a user input, stopping the script
+    except KeyboardInterrupt:
+        stop_motor()
+        pi1.stop()  # Terminate the connection to the pigpiod instance and release resources
+        print("Exit Python")
+        exit(0)  # exit python with exit code 0
