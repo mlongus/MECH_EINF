@@ -1,64 +1,79 @@
-""" Labor 5, Regelkreis, MECH_EINF Module WI HSLU T&A
-    author:         Simon van Hemert
-    date:           2020-04-22
-    organization:   HSLU T&A """
+"""-----------------------------------------------------
+¦    File name: L5_IR_ouput.py                          ¦
+¦    Version: 1.0                                       ¦
+¦    Author: Jonas Josi                                 ¦
+¦    Date created: 2024/05/15                           ¦
+¦    Last modified: 2024/05/15                          ¦
+¦    Python Version: 3.7.3                              ¦
+------------------------------------------------------"""
 
-# TODO !!! Vor dem eigentlichen Starten des Programmes muss zuerst folgender Befehl ausgefuehrt werden: sudo pigpiod
-
-## Import Packages
+# ----------- import external Python module -----------
 import grovepi
-import signal
 import time
 
 
-""" Initialization """
-def receiveSignal(signalNumber, frame):
-    """ When any error signal is received:
-    - print signal number,
-    - turn of Motor,
-    - and exit """
-    print("Received: ", signalNumber)
-    print("Exit Python!")
-    os._exit(0)
+# ----------- global constant -----------
+IR_SENSOR = 0  # Connect the Grove 80cm Infrared Proximity Sensor to analog port A0
+
+N_MEASUREMENTS = 200  # number of measurements (of ir sensor) to make, before calculating the average value
+MESUREMENT_INTERVAL = 0.5  # interval time in [s] between two measurements
+
+ADC_REF = 5  # Reference voltage of ADC (which is built-in the GrovePi-Board) is 5 V
+ADC_RES = 1023  # The ADC on the GrovePi-Board has a resolution of 10 bit -> 1024 different digital levels in range of 0-1023
 
 
-# When a signal is received, activate the (above) receiveSignal method.
-signal.signal(signal.SIGINT, receiveSignal)
+# ----------- function definition -----------
+def read_voltage_ir_sensor(port):
+    """
+    Returns the current voltage in [V] of the infrared proximity sensor by mapping the (digital) value returned
+    by the function grovepi.analogRead() to the reference voltage of the ADC (analog-to-digital-converter)
 
-# Set ports
-sensor = 0  # Connect the Grove 80cm Infrared Proximity Sensor to analog port A0
+    Parameters
+    ----------
+    port : int
+        analog port of GrovePi connected to infrared proximity sensor.
 
-# Setup Sensor
-grovepi.pinMode(sensor, "INPUT")
-adc_ref = 5         # Reference voltage of ADC is 5 [V]
-grove_vcc = 5       # Vcc of the grove interface is normally 5 [V]
-sensor_value = 0    # Initial sensor value
+    Returns
+    -------
+    float or False
+        if measurment of proximity sensor doesn't fail, the voltage on pin of infrared proximity sensor in [V]
+        is returned. Otherwise False is returned.
+    """
+    try:
+        sensor_value = grovepi.analogRead(port)  # digital value between 0 and 1023 (see constant "ADC_RES")
+    except IOError:
+        print(f"Error to read analog port {port}: {IOError}")
+        return False
+    voltage = float(sensor_value) * ADC_REF / ADC_RES
+    return voltage
 
 
-""" Measure distance"""
-try:
+# ----------- main code -----------
+if __name__ == "__main__":
+    # initalize infrared sensor (pin)
+    grovepi.pinMode(IR_SENSOR, "INPUT")
+
     while True:
-        i = 0                   # Reset counter
-        voltage_average = 0     # Reset average Voltage
-        while i < 100:          # For 100 measurements
-            # Read sensor value
-            sensor_value = grovepi.analogRead(sensor)
+        try:
+            measurement = 0
+            sum_voltage = 0
 
-            # Calculate voltage and add to average
-            voltage = round((float)(sensor_value) * adc_ref / 1024, 2)
-            voltage_average += voltage
-            i += 1
+            while measurement < N_MEASUREMENTS:
+                voltage = read_voltage_ir_sensor(IR_SENSOR)
+                if voltage:
+                    sum_voltage += voltage
+                    measurement += 1
 
-        # Find average voltage
-        v = voltage_average / i
+            # calculate average voltage of all measurements done
+            average_voltage = sum_voltage / N_MEASUREMENTS
 
-        # Calculate distance using sensor characteristics, coefficients found from calibration
-        is_distance = round(44.593*voltage*voltage - 152.73*voltage + 159.38, 2)
+            # Calculate distance using sensor characteristics, coefficients found from calibration (L5_IR_kalibrieren.py)
+            distance = round(44.593 * average_voltage * average_voltage - 152.73 * average_voltage + 159.38, 2)
 
-        # Print output and pause
-        print("Spannung ist", voltage, "\nDistanz ist: " + str(is_distance) + " mm")
-        time.sleep(0.5)
+            # Print output and pause
+            print(f"voltage: {round(average_voltage,2)} [V] -> distance: {distance} [mm]")
+            time.sleep(MESUREMENT_INTERVAL)
 
-except KeyboardInterrupt:
-    pass
-
+        except KeyboardInterrupt:
+            print("Script stopped")
+            exit(0)

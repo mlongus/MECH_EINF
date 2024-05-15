@@ -1,100 +1,183 @@
-""" Labor 5, Regelkreis, MECH_EINF Module WI HSLU T&A
-    author:         Simon van Hemert
-    date:           2020-04-22
-    organization:   HSLU T&A """
+"""-----------------------------------------------------
+¦    File name: L5_IR_kalibrieren.py                    ¦
+¦    Version: 1.0                                       ¦
+¦    Author: Jonas Josi                                 ¦
+¦    Date created: 2024/05/15                           ¦
+¦    Last modified: 2024/05/15                          ¦
+¦    Python Version: 3.7.3                              ¦
+------------------------------------------------------"""
 
-# TODO !!! Vor dem eigentlichen Starten des Programmes muss zuerst folgender Befehl ausgefuehrt werden: sudo pigpiod
-
-## Import Packages
-import pigpio
-import signal
+# ----------- import external Python module -----------
 import grovepi
-
-""" Initialization """
-def receiveSignal(signalNumber, frame):
-    """ When any error signal is received:
-    - print signal number,
-    - turn of Motor,
-    - and exit """
-    print("Received: ", signalNumber)
-    print("Exit Python!")
-    turn_motor_off()          # Turn off DCmotor
-    os._exit(0)
+import csv
 
 
-# When a signal is received, activate the (above) receiveSignal method.
-signal.signal(signal.SIGINT, receiveSignal)
+# ----------- global constant -----------
+CSV_FILENAME = "Sensorkalibrierung.csv"  # *** CHANGE ME *** file to save calibration data for infrared sensor
+CSV_DELIMITER = ";"  # *** CHANGE ME *** Character to separate data fields / cells in the CSV file
 
-# Set ports
-sensor = 0  # Connect the Grove 80cm Infrared Proximity Sensor to analog port A0
+IR_SENSOR = 0  # Connect the Grove 80cm Infrared Proximity Sensor to analog port A0
 
-# Setup Sensor
-grovepi.pinMode(sensor, "INPUT")
-adc_ref = 5         # Reference voltage of ADC is 5 [V]
-grove_vcc = 5       # Vcc of the grove interface is normally 5 [V]
-sensor_value = 0    # Initial sensor value
+MIN_MEAS_DIST = 25  # minimum measurement distance in [mm]
+MAX_MEAS_DIST = 65  # max measurement distance in [mm]
+INCREMENT_MEAS_DIST = 5  # increment in [mm] of two consecutive measurement distances
+N_MEASUREMENTS = 200  # number of measurements (of ir sensor) to be done for each measurement distance
 
-# Settings
-xmax = 65                       # Maximum distance [mm]
-xmin = 25                       # Minimal distance [mm]
-nmeasurement = int((65-25)/5 + 1)   # Number of measurements for each measurement cycle []
-ncycle = 2                     # Number of measurement cycles []
+ADC_REF = 5  # Reference voltage of ADC (which is built-in the GrovePi-Board) is 5 V
+ADC_RES = 1023  # The ADC on the GrovePi-Board has a resolution of 10 bit -> 1024 different digital levels in range of 0-1023
 
 
-""" Save results in CSV File """
-filename = "sensorkalibrierung.csv"    # The filename can be edited
-csvresult = open(filename, "w")                             # Open and (over-)write ("w") file
-csvresult.write("Spannung (V); Abstand (mm)" + "\n")         # Write titles
-csvresult.close                                             # Close file
+# ----------- function definition -----------
+def read_voltage_ir_sensor(port):
+    """
+    Returns the current voltage in [V] of the infrared proximity sensor by mapping the (digital) value returned
+    by the function grovepi.analogRead() to the reference voltage of the ADC (analog-to-digital-converter)
+
+    Parameters
+    ----------
+    port : int
+        analog port of GrovePi connected to infrared proximity sensor.
+
+    Returns
+    -------
+    float or False
+        if measurment of proximity sensor doesn't fail, the voltage on pin of infrared proximity sensor in [V]
+        is returned. Otherwise False is returned.
+    """
+    try:
+        sensor_value = grovepi.analogRead(port) # digital value between 0 and 1023 (see constant "ADC_RES")
+    except IOError:
+        print(f"Error to read analog port {port}: {IOError}")
+        return False
+    voltage = float(sensor_value) * ADC_REF / ADC_RES
+    return voltage
+
+def create_csv_file(filename):
+    """
+    If not already existing, create csv-file.
+
+    Parameters
+    ----------
+    filename : String
+        Path of csv-file to be created. The path can be either absolute (full path) or a relative path to the path of
+        this script.
+
+    Returns
+    -------
+    bool
+        True if the file was successfully created.
+        False if the file could not be created.
+    """
+    try:
+        # if csv-file not already exists, try to create the file
+        with open(filename, 'x') as csvfile:
+            pass  # do nothing
+        return True
+    except FileExistsError:
+        print(f"csv-file '{filename}' cannot be created since it already exists")
+        return False
 
 
-""" Measure and Save data """
-x = xmax                # Set x to the maximum distance
-towards_sensor = True   # Start with moving towards sensor.
-try:
-    for measurement in range(nmeasurement*ncycle):   # Loop over all measurements
-        # Ask user to drive to the current measurement distance
-        userinput = "Fahre auf " + str(x) + " mm  (Mit Enter bestaetigen)"
-        userinput = input(userinput)
+def add_row_to_csv(filename, row_data, delimiter):
+    """
+    Add a row of data to an existing csv-file.
+
+    Parameters
+    ----------
+    filename : String
+        Path of csv-file to be append by an row. The path can be either absolute (full path) or a relative path
+        to the path of this script.
+    row_data : String
+        Data to be added to the new row.
+    delimiter : String
+        Character or string used to separate data fields in the CSV file.
 
 
-        """ Measure distance """
-        i = 0                   # Reset counter
-        voltage_average = 0     # Reset average Voltage
-        while i < 200:          # For 200 measurements
-            # Read sensor value
-            sensor_value = grovepi.analogRead(sensor)
+    Returns
+    -------
+    bool
+        True if a row with data was successfully added to the csv-file.
+        False if adding a row with data to the csv-file failed.
+    """
+    try:
+        # open csv-file in append mode ('a')
+        with open(filename, 'a') as csvfile:
+            # create csv_writer object
+            csv_writer = csv.writer(csvfile, delimiter=delimiter)
 
-            # Calculate voltage and add to average
-            voltage = round((float)(sensor_value) * adc_ref / 1024, 2)
-            voltage_average += voltage
-            i += 1
+            # convert string into a list in which each entry has the value of a cell
+            lst_cell_values = row_data.split(delimiter)
 
-        # Find and print average
-        v = voltage_average / i
-        print(" voltage =", v)
-
-
-        """ Save measurement to CSV """
-        csvresult = open(filename, "a")                 # Open and append ("a") file
-        csvresult.write(str(v) + "; " + str(x) + "\n")  # Write one line of data
-        csvresult.close                                 # Close the file
+            # append row to csv file (with corresponding data)
+            csv_writer.writerow(lst_cell_values)
+        return True
+    except Exception as e:
+        print(f"Error to add row '{row_data}' to csv-file '{filename}': {e}")
+        return False
 
 
-        """ Update distance """
-        # Change loop variable, 5 mm moved.
-        if towards_sensor:      # When moving toward sensor
-            if x > xmin:        # When minimal distance is not reached yet:
-                x -= 5          # Move 5 [mm] closer
-            elif x == xmin:     # When minimal distance is reached:
-                x = x           # 2nd point at minimal distance
-                towards_sensor = False    # Start moving away from sensor
-        else:                   # When not moving toward sensor
-            if x < xmax:        # When maximal distance is not reached yet:
-                x += 5          # Move 5 [mm] away
-            elif x == xmax:     # When maximal distance is reached:
-                x = x           # 2nd point at maximal distance
-                towards_sensor = True     # Start moving towards sensor
+# ----------- main code -----------
 
-except KeyboardInterrupt:
-    pass
+if __name__ == "__main__":
+    # initalize infrared sensor (pin)
+    grovepi.pinMode(IR_SENSOR, "INPUT")
+    
+    # create csv-file
+    if not create_csv_file(CSV_FILENAME):
+        exit(1)  # csv-file cannot be created or already exists -> stop script
+
+    # add first row (with table headers) to csv file
+    add_row_to_csv(CSV_FILENAME, f"Spannung (V){CSV_DELIMITER} Abstand (mm){CSV_DELIMITER}", CSV_DELIMITER)
+
+    try:
+        meas_dist = MAX_MEAS_DIST
+        while meas_dist >= MIN_MEAS_DIST:
+        # for meas_dist in range(MAX_MEAS_DIST, MIN_MEAS_DIST, - INCREMENT_MEAS_DIST):
+            input(f"Fahre auf {meas_dist} mm (Mit Enter bestaetigen)")
+
+            measurement = 0
+            sum_voltage = 0
+
+            while measurement < N_MEASUREMENTS:
+                voltage = read_voltage_ir_sensor(IR_SENSOR)
+                if voltage:
+                    sum_voltage += voltage
+                    measurement += 1
+
+            average_voltage = sum_voltage / N_MEASUREMENTS
+            print(f"dist: {meas_dist} [mm] -> voltage: {average_voltage} [V]")
+            print("-" * 50)
+
+            # append row to csv file with measurement data
+            add_row_to_csv(CSV_FILENAME, f"{average_voltage}{CSV_DELIMITER}{meas_dist}", CSV_DELIMITER)
+
+            meas_dist -= INCREMENT_MEAS_DIST
+
+        meas_dist = MIN_MEAS_DIST
+        while meas_dist <= MAX_MEAS_DIST:
+        # for meas_dist in range(MIN_MEAS_DIST, MAX_MEAS_DIST, INCREMENT_MEAS_DIST):
+            input(f"Fahre auf {meas_dist} mm (Mit Enter bestaetigen)")
+
+            measurement = 0
+            sum_voltage = 0
+
+            while measurement < N_MEASUREMENTS:
+                voltage = read_voltage_ir_sensor(IR_SENSOR)
+                if voltage:
+                    sum_voltage += voltage
+                    measurement += 1
+
+            average_voltage = sum_voltage / N_MEASUREMENTS
+            print(f"dist: {meas_dist} [mm] -> voltage: {average_voltage} [V]")
+            print("-" * 50)
+
+            # append row to csv file with measurement data
+            add_row_to_csv(CSV_FILENAME, f"{average_voltage}{CSV_DELIMITER}{meas_dist}", CSV_DELIMITER)
+
+            meas_dist += INCREMENT_MEAS_DIST
+
+    except KeyboardInterrupt:
+        print("Script stopped")
+        pass
+
+    print("\n" + f"*** Calibration-Measurements successully finished. Data is saved to file '{CSV_FILENAME}' ***")

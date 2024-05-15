@@ -1,5 +1,5 @@
 """-----------------------------------------------------
-¦    File name: L5_Regelkreis_drehzahl.py               ¦
+¦    File name: L5_Regelkreis_zeit.py                ¦
 ¦    Version: 1.0                                       ¦
 ¦    Author: Jonas Josi                                 ¦
 ¦    Date created: 2024/05/15                           ¦
@@ -18,11 +18,10 @@ import time
 
 # ----------- global constant -----------
 """ Settings """
-k = 5  # *** CHANGE ME *** controller amplification factor k [mm^-1]
+k = 0.001  # *** CHANGE ME *** controller amplification factor k [s/mm]
 N_MEASUREMENTS = 10  # *** CHANGE ME *** number of distance measurements [] over which to average
-DRIVETIME = 0.1  # *** CHANGE ME *** time in [s] to drive the motor with a specific voltage before recalculate the voltage
-OFFSET_DUTYCYCLE = 10  # *** CHANGE ME *** value [dmnl] to add to calculated duty_cycle of controller. This prevents that the motor is driven by a voltage which is to small to rotate the motor shaft.
-CSV_FILENAME = "Wegdiagramm_Drehzahl.csv"  # *** CHANGE ME *** file to log data (timestamp and distance)
+VOLTAGE = 6  # *** CHANGE ME *** voltage for DC motor [V] between 0 und 12 V (Voltage from power supply is always 12 V)
+CSV_FILENAME = "Wegdiagramm_Zeit.csv"  # *** CHANGE ME *** file to log data (timestamp and distance)
 CSV_DELIMITER = ";"  # *** CHANGE ME *** Character to separate data fields / cells in the CSV file
 
 IR_SENSOR = 0  # Connect the Grove 80cm Infrared Proximity Sensor to analog port A0
@@ -32,12 +31,16 @@ M1 = 20
 M2 = 21
 D1 = 26  # enable/disable output pins M1, M2
 
+
 ADC_REF = 5  # Reference voltage of ADC (which is built-in the GrovePi-Board) is 5 V
 ADC_RES = 1023  # The ADC on the GrovePi-Board has a resolution of 10 bit -> 1024 different digital levels in range of 0-1023
+
 
 # auxiliary parameters
 MAX_VOLTAGE = 12  # supply voltage of motor driver is 12 V (which equals the max. rated voltage of the DC motor)
 PWM_FREQUENCY = 4000  # Hz
+PWM_DUTYCYCLE_RESOLUTION = 8  # 8 bit -> value range of PWM_DUTYCYCLE is between 0 (OFF) and 255 (FULLY ON)
+PWM_DUTYCYCLE = round((2 ** PWM_DUTYCYCLE_RESOLUTION - 1) / MAX_VOLTAGE * VOLTAGE, 0)  # PWM_DUTYCYCLE from 0 (OFF) to 255 bit (FULLY ON)
 
 
 # ----------- function definition -----------
@@ -191,23 +194,23 @@ if __name__ == "__main__":
     # add first row to csv file, with parameters this script
     if CSV_DELIMITER == ",":
         add_row_to_csv(filename,
-                       f"k={k} (mm^-1); drivetime={DRIVETIME} (s); nmeasurements={N_MEASUREMENTS}; offset_dutycycle={OFFSET_DUTYCYCLE}; set_distance={int(set_distance)} (mm)",
+                       f"k={k} (s/mm); voltage={VOLTAGE} (V); nmeasurements={N_MEASUREMENTS}; set_distance={int(set_distance)} (mm)",
                        CSV_DELIMITER)
     elif CSV_DELIMITER == ";":
         add_row_to_csv(filename,
-                       f"k={k} (mm^-1), drivetime={DRIVETIME} (s), nmeasurements={N_MEASUREMENTS}, offset_dutycycle={OFFSET_DUTYCYCLE}, set_distance={int(set_distance)} (mm)",
+                       f"k={k} (s/mm), voltage={VOLTAGE} (V), nmeasurements={N_MEASUREMENTS}, set_distance={int(set_distance)} (mm)",
                        CSV_DELIMITER)
     else:
         add_row_to_csv(filename,
-                       f"k={k} (mm^-1)  drivetime={DRIVETIME} (s)  nmeasurements={N_MEASUREMENTS}  offset_dutycycle={OFFSET_DUTYCYCLE}  set_distance={int(set_distance)} (mm)",
+                       f"k={k} (s/mm)  voltage={VOLTAGE} (V)  nmeasurements={N_MEASUREMENTS}  set_distance={int(set_distance)} (mm)",
                        CSV_DELIMITER)
 
-    # add second row to csv file, with table headers
+    # add second row to csv file, with table headers 
     add_row_to_csv(filename, f"time (s){CSV_DELIMITER}ist_distanz (mm){CSV_DELIMITER}delta_distance (mm)", CSV_DELIMITER)
-
+    
     start_timestamp = None
-
-    """ control loop with constant drivetime and dynamically calculated speed/dutycycle """
+    
+    """ control loop with constant speed and dynamically calculated drivetime """
     while True:
         try:
             measurement = 0
@@ -237,36 +240,29 @@ if __name__ == "__main__":
             # update csv-file
             add_row_to_csv(filename, f"{time_elapsed}{CSV_DELIMITER}{distance}{CSV_DELIMITER}{round(delta_distance, 3)}", CSV_DELIMITER)
 
-            # calculate speed to drive the motor
-            speed = delta_distance * k
-            pwm_dutycycle = int(round(abs(speed) + OFFSET_DUTYCYCLE, 0))
+            # calculate drivetime
+            drivetime = abs(delta_distance * k)   # time to drive the motor in [s]
 
-            # make sure that the pwm dutycycle is within range 0-255 (8 Bit)
-            if pwm_dutycycle < 0:
-                pwm_dutycycle = 0
-            if pwm_dutycycle > 255:
-                pwm_dutycycle = 255
-
-            print(f"ist: {distance} mm, soll: {set_distance} mm -> delta_dist: {round(delta_distance, 4)} mm -> speed: {round(speed, 4)}")
+            print(f"ist: {distance} mm, soll: {set_distance} mm -> delta_dist: {round(delta_distance, 4)} mm -> drivetime: {round(drivetime, 4)} s")
 
             # define motor direction
-            if speed >= 0:
+            if delta_distance >= 0:
                 direction = 0
             else:
                 direction = 1
 
-            # drive motor with calculated speed/voltage for constant drivetime
+            # drive motor with constant speed/voltage for calculated drivetime
             if direction == 0:
                 # set output "M2" on motor driver to low (0 V)
                 pi1.write(M2, 0)
                 # set duty cycle of PWM signal on output "M1"
-                pi1.set_PWM_dutycycle(M1, pwm_dutycycle)
+                pi1.set_PWM_dutycycle(M1, PWM_DUTYCYCLE)
             elif direction == 1:
                 # set output "M1" on motor driver to low (0 V)
                 pi1.write(M1, 0)
                 # set duty cycle of PWM signal on output "M2"
-                pi1.set_PWM_dutycycle(M2, pwm_dutycycle)
-            time.sleep(DRIVETIME)
+                pi1.set_PWM_dutycycle(M2, PWM_DUTYCYCLE)
+            time.sleep(drivetime)
         except KeyboardInterrupt:
             stop_motor()
             pi1.stop()  # Terminate the connection to the pigpiod instance and release resources
