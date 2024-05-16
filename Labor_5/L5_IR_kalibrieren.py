@@ -3,14 +3,13 @@
 ¦    Version: 1.0                                       ¦
 ¦    Author: Jonas Josi                                 ¦
 ¦    Date created: 2024/05/15                           ¦
-¦    Last modified: 2024/05/15                          ¦
+¦    Last modified: 2024/05/16                          ¦
 ¦    Python Version: 3.7.3                              ¦
 ------------------------------------------------------"""
 
 # ----------- import external Python module -----------
 import grovepi
 import csv
-
 
 # ----------- global constant -----------
 CSV_FILENAME = "Sensorkalibrierung.csv"  # *** CHANGE ME *** file to save calibration data for infrared sensor
@@ -22,6 +21,7 @@ MIN_MEAS_DIST = 25  # minimum measurement distance in [mm]
 MAX_MEAS_DIST = 65  # max measurement distance in [mm]
 INCREMENT_MEAS_DIST = 5  # increment in [mm] of two consecutive measurement distances
 N_MEASUREMENTS = 200  # number of measurements (of ir sensor) to be done for each measurement distance
+N_MEASUREMENTS_CYCLES = 2  # number of measurements cycles (towards, away) from sensor
 
 ADC_REF = 5  # Reference voltage of ADC (which is built-in the GrovePi-Board) is 5 V
 ADC_RES = 1023  # The ADC on the GrovePi-Board has a resolution of 10 bit -> 1024 different digital levels in range of 0-1023
@@ -45,12 +45,13 @@ def read_voltage_ir_sensor(port):
         is returned. Otherwise False is returned.
     """
     try:
-        sensor_value = grovepi.analogRead(port) # digital value between 0 and 1023 (see constant "ADC_RES")
+        sensor_value = grovepi.analogRead(port)  # digital value between 0 and 1023 (see constant "ADC_RES")
     except IOError:
         print(f"Error to read analog port {port}: {IOError}")
         return False
     voltage = float(sensor_value) * ADC_REF / ADC_RES
     return voltage
+
 
 def create_csv_file(filename):
     """
@@ -121,7 +122,7 @@ def add_row_to_csv(filename, row_data, delimiter):
 if __name__ == "__main__":
     # initalize infrared sensor (pin)
     grovepi.pinMode(IR_SENSOR, "INPUT")
-    
+
     # create csv-file
     if not create_csv_file(CSV_FILENAME):
         exit(1)  # csv-file cannot be created or already exists -> stop script
@@ -130,51 +131,52 @@ if __name__ == "__main__":
     add_row_to_csv(CSV_FILENAME, f"Spannung (V){CSV_DELIMITER} Abstand (mm){CSV_DELIMITER}", CSV_DELIMITER)
 
     try:
-        meas_dist = MAX_MEAS_DIST
-        while meas_dist >= MIN_MEAS_DIST:
-        # for meas_dist in range(MAX_MEAS_DIST, MIN_MEAS_DIST, - INCREMENT_MEAS_DIST):
-            input(f"Fahre auf {meas_dist} mm (Mit Enter bestaetigen)")
+        for _ in range(N_MEASUREMENTS_CYCLES):
+            meas_dist = MAX_MEAS_DIST
+            while meas_dist >= MIN_MEAS_DIST:
+                # for meas_dist in range(MAX_MEAS_DIST, MIN_MEAS_DIST, - INCREMENT_MEAS_DIST):
+                input(f"Fahre auf {meas_dist} mm (Mit Enter bestaetigen)")
 
-            measurement = 0
-            sum_voltage = 0
+                measurement = 0
+                sum_voltage = 0
 
-            while measurement < N_MEASUREMENTS:
-                voltage = read_voltage_ir_sensor(IR_SENSOR)
-                if voltage:
-                    sum_voltage += voltage
-                    measurement += 1
+                while measurement < N_MEASUREMENTS:
+                    voltage = read_voltage_ir_sensor(IR_SENSOR)
+                    if voltage:
+                        sum_voltage += voltage
+                        measurement += 1
 
-            average_voltage = sum_voltage / N_MEASUREMENTS
-            print(f"dist: {meas_dist} [mm] -> voltage: {average_voltage} [V]")
-            print("-" * 50)
+                average_voltage = sum_voltage / N_MEASUREMENTS
+                print(f"dist: {meas_dist} [mm] -> voltage: {average_voltage} [V]")
+                print("-" * 50)
 
-            # append row to csv file with measurement data
-            add_row_to_csv(CSV_FILENAME, f"{average_voltage}{CSV_DELIMITER}{meas_dist}", CSV_DELIMITER)
+                # append row to csv file with measurement data
+                add_row_to_csv(CSV_FILENAME, f"{average_voltage}{CSV_DELIMITER}{meas_dist}", CSV_DELIMITER)
 
-            meas_dist -= INCREMENT_MEAS_DIST
+                meas_dist -= INCREMENT_MEAS_DIST
 
-        meas_dist = MIN_MEAS_DIST
-        while meas_dist <= MAX_MEAS_DIST:
-        # for meas_dist in range(MIN_MEAS_DIST, MAX_MEAS_DIST, INCREMENT_MEAS_DIST):
-            input(f"Fahre auf {meas_dist} mm (Mit Enter bestaetigen)")
+            meas_dist = MIN_MEAS_DIST
+            while meas_dist <= MAX_MEAS_DIST:
+                # for meas_dist in range(MIN_MEAS_DIST, MAX_MEAS_DIST, INCREMENT_MEAS_DIST):
+                input(f"Fahre auf {meas_dist} mm (Mit Enter bestaetigen)")
 
-            measurement = 0
-            sum_voltage = 0
+                measurement = 0
+                sum_voltage = 0
 
-            while measurement < N_MEASUREMENTS:
-                voltage = read_voltage_ir_sensor(IR_SENSOR)
-                if voltage:
-                    sum_voltage += voltage
-                    measurement += 1
+                while measurement < N_MEASUREMENTS:
+                    voltage = read_voltage_ir_sensor(IR_SENSOR)
+                    if voltage:
+                        sum_voltage += voltage
+                        measurement += 1
 
-            average_voltage = sum_voltage / N_MEASUREMENTS
-            print(f"dist: {meas_dist} [mm] -> voltage: {average_voltage} [V]")
-            print("-" * 50)
+                average_voltage = sum_voltage / N_MEASUREMENTS
+                print(f"dist: {meas_dist} [mm] -> voltage: {average_voltage} [V]")
+                print("-" * 50)
 
-            # append row to csv file with measurement data
-            add_row_to_csv(CSV_FILENAME, f"{average_voltage}{CSV_DELIMITER}{meas_dist}", CSV_DELIMITER)
+                # append row to csv file with measurement data
+                add_row_to_csv(CSV_FILENAME, f"{average_voltage}{CSV_DELIMITER}{meas_dist}", CSV_DELIMITER)
 
-            meas_dist += INCREMENT_MEAS_DIST
+                meas_dist += INCREMENT_MEAS_DIST
 
     except KeyboardInterrupt:
         print("Script stopped")
