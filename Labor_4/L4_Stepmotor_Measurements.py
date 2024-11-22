@@ -109,15 +109,8 @@ if __name__ == "__main__":
         while cycle < CYCLE_NUMBER:
             if direction == 0:
                 while step < MOVEMENT_STEP_NUMBER:
-                    # activate coil 2 & coil 4
-                    set_motor_coils(0, 1, 0, 1)
-                    busy_sleep(STEP_TIME)
-                    step += 1
-
-                    if step >= MOVEMENT_STEP_NUMBER:
-                        break  # leave while-loop
-                    # activate coil 2 & coil 3
-                    set_motor_coils(0, 1, 1, 0)
+                    # activate coil 1 & coil 4
+                    set_motor_coils(1, 0, 0, 1)
                     busy_sleep(STEP_TIME)
                     step += 1
 
@@ -130,24 +123,21 @@ if __name__ == "__main__":
 
                     if step >= MOVEMENT_STEP_NUMBER:
                         break  # leave while-loop
-                    # activate coil 1 & coil 4
-                    set_motor_coils(1, 0, 0, 1)
+                    # activate coil 2 & coil 3
+                    set_motor_coils(0, 1, 1, 0)
                     busy_sleep(STEP_TIME)
                     step += 1
 
                     if step >= MOVEMENT_STEP_NUMBER:
                         break  # leave while-loop
+                    # activate coil 2 & coil 4
+                    set_motor_coils(0, 1, 0, 1)
+                    busy_sleep(STEP_TIME)
+                    step += 1
             elif direction == 1:
                 while step < MOVEMENT_STEP_NUMBER:
-                    # activate coil 1 & coil 4
-                    set_motor_coils(1, 0, 0, 1)
-                    busy_sleep(STEP_TIME)
-                    step += 1
-
-                    if step >= MOVEMENT_STEP_NUMBER:
-                        break  # leave while-loop
-                    # activate coil 1 & coil 3
-                    set_motor_coils(1, 0, 1, 0)
+                    # activate coil 2 & coil 4
+                    set_motor_coils(0, 1, 0, 1)
                     busy_sleep(STEP_TIME)
                     step += 1
 
@@ -160,10 +150,20 @@ if __name__ == "__main__":
 
                     if step >= MOVEMENT_STEP_NUMBER:
                         break  # leave while-loop
-                    # activate coil 2 & coil 4
-                    set_motor_coils(0, 1, 0, 1)
+                    # activate coil 1 & coil 3
+                    set_motor_coils(1, 0, 1, 0)
                     busy_sleep(STEP_TIME)
                     step += 1
+
+                    if step >= MOVEMENT_STEP_NUMBER:
+                        break  # leave while-loop
+                    # activate coil 1 & coil 4
+                    set_motor_coils(1, 0, 0, 1)
+                    busy_sleep(STEP_TIME)
+                    step += 1
+
+                    if step >= MOVEMENT_STEP_NUMBER:
+                        break  # leave while-loop
 
             step = 0
             direction = not direction  # change direction
