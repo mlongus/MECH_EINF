@@ -134,7 +134,6 @@ if __name__ == "__main__":
         for _ in range(N_MEASUREMENTS_CYCLES):
             meas_dist = MAX_MEAS_DIST
             while meas_dist >= MIN_MEAS_DIST:
-                # for meas_dist in range(MAX_MEAS_DIST, MIN_MEAS_DIST, - INCREMENT_MEAS_DIST):
                 input(f"Fahre auf {meas_dist} mm (Mit Enter bestaetigen)")
 
                 measurement = 0
@@ -157,7 +156,6 @@ if __name__ == "__main__":
 
             meas_dist = MIN_MEAS_DIST
             while meas_dist <= MAX_MEAS_DIST:
-                # for meas_dist in range(MIN_MEAS_DIST, MAX_MEAS_DIST, INCREMENT_MEAS_DIST):
                 input(f"Fahre auf {meas_dist} mm (Mit Enter bestaetigen)")
 
                 measurement = 0
@@ -182,4 +180,4 @@ if __name__ == "__main__":
         print("Script stopped")
         pass
 
-    print("\n" + f"*** Calibration-Measurements successully finished. Data is saved to file '{CSV_FILENAME}' ***")
+    print("\n" + f"*** Calibration-Measurements successfully finished. Data is saved to file '{CSV_FILENAME}' ***")
