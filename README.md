@@ -1,2 +1,3 @@
-# MECH_EINF
-MECH_EINF Unterlagen und Codes zu den Laboren zum Modul "Mechatronik mit Labor"
+# MECH_LAB
+
+Code for the lab exercises of the module MECH_LAB.
