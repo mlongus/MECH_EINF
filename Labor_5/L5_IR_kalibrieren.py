@@ -1,15 +1,16 @@
 """-----------------------------------------------------
 ¦    File name: L5_IR_kalibrieren.py                    ¦
-¦    Version: 1.0                                       ¦
+¦    Version: 1.1                                       ¦
 ¦    Author: Jonas Josi                                 ¦
 ¦    Date created: 2024/05/15                           ¦
-¦    Last modified: 2024/05/16                          ¦
+¦    Last modified: 2024/05/15                          ¦
 ¦    Python Version: 3.7.3                              ¦
 ------------------------------------------------------"""
 
 # ----------- import external Python module -----------
 import grovepi
 import csv
+
 
 # ----------- global constant -----------
 CSV_FILENAME = "Sensorkalibrierung.csv"  # *** CHANGE ME *** file to save calibration data for infrared sensor
@@ -21,7 +22,7 @@ MIN_MEAS_DIST = 25  # minimum measurement distance in [mm]
 MAX_MEAS_DIST = 65  # max measurement distance in [mm]
 INCREMENT_MEAS_DIST = 5  # increment in [mm] of two consecutive measurement distances
 N_MEASUREMENTS = 200  # number of measurements (of ir sensor) to be done for each measurement distance
-N_MEASUREMENTS_CYCLES = 2  # number of measurements cycles (towards, away) from sensor
+N_MEASUREMENTS_CYCLES = 1  # number of measurements cycles (towards, away) from sensor
 
 ADC_REF = 5  # Reference voltage of ADC (which is built-in the GrovePi-Board) is 5 V
 ADC_RES = 1023  # The ADC on the GrovePi-Board has a resolution of 10 bit -> 1024 different digital levels in range of 0-1023
@@ -51,7 +52,6 @@ def read_voltage_ir_sensor(port):
         return False
     voltage = float(sensor_value) * ADC_REF / ADC_RES
     return voltage
-
 
 def create_csv_file(filename):
     """
@@ -122,7 +122,7 @@ def add_row_to_csv(filename, row_data, delimiter):
 if __name__ == "__main__":
     # initalize infrared sensor (pin)
     grovepi.pinMode(IR_SENSOR, "INPUT")
-
+    
     # create csv-file
     if not create_csv_file(CSV_FILENAME):
         exit(1)  # csv-file cannot be created or already exists -> stop script

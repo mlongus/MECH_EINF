@@ -1,6 +1,6 @@
 """-----------------------------------------------------
 ¦    File name: L4_Stepmotor.py                         ¦
-¦    Version: 1.0                                       ¦
+¦    Version: 1.1                                       ¦
 ¦    Author: Jonas Josi                                 ¦
 ¦    Date created: 2024/04/18                           ¦
 ¦    Last modified: 2024/04/18                          ¦
@@ -14,10 +14,10 @@ import time
 
 # ----------- global constant -----------
 # assign motor driver interface to GPIO's of Raspberry Pi
-M1 = 20  # A  
-M2 = 21  # A/
-M3 = 6   # B 
-M4 = 13  # B/
+M1 = 20
+M2 = 21
+M3 = 6
+M4 = 13
 D1 = 26  # enable/disable output pins M1, M2
 D2 = 12  # enable/disable output pins M3, M4
 
@@ -103,30 +103,30 @@ if __name__ == "__main__":
         # endless loop
         while True:
             if DIRECTION == 0:
-                # activate coil 1 & coil 4
-                set_motor_coils(1, 0, 0, 1)
-                busy_sleep(STEP_TIME)
-                # activate coil 1 & coil 3
-                set_motor_coils(1, 0, 1, 0)
+                # activate coil 2 & coil 4
+                set_motor_coils(0, 1, 0, 1)
                 busy_sleep(STEP_TIME)
                 # activate coil 2 & coil 3
                 set_motor_coils(0, 1, 1, 0)
                 busy_sleep(STEP_TIME)
-                # activate coil 2 & coil 4
-                set_motor_coils(0, 1, 0, 1)
+                # activate coil 1 & coil 3
+                set_motor_coils(1, 0, 1, 0)
+                busy_sleep(STEP_TIME)
+                # activate coil 1 & coil 4
+                set_motor_coils(1, 0, 0, 1)
                 busy_sleep(STEP_TIME)
             else:
-                # activate coil 2 & coil 4
-                set_motor_coils(0, 1, 0, 1)
-                busy_sleep(STEP_TIME)
-                # activate coil 2 & coil 3
-                set_motor_coils(0, 1, 1, 0)
+                # activate coil 1 & coil 4
+                set_motor_coils(1, 0, 0, 1)
                 busy_sleep(STEP_TIME)
                 # activate coil 1 & coil 3
                 set_motor_coils(1, 0, 1, 0)
                 busy_sleep(STEP_TIME)
-                # activate coil 1 & coil 4
-                set_motor_coils(1, 0, 0, 1)
+                # activate coil 2 & coil 3
+                set_motor_coils(0, 1, 1, 0)
+                busy_sleep(STEP_TIME)
+                # activate coil 2 & coil 4
+                set_motor_coils(0, 1, 0, 1)
                 busy_sleep(STEP_TIME)
 
     # detect exception - usually triggered by a user input, stopping the script
