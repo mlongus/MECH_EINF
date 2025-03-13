@@ -1,5 +1,5 @@
 """-----------------------------------------------------
-¦    File name: L3_ReadUltrasonic.py                    ¦
+¦    File name: L2_ReadUltrasonic.py                    ¦
 ¦    Version: 1.0                                       ¦
 ¦    Author: Jonas Josi                                 ¦
 ¦    Date created: 2024/04/10                           ¦

@@ -1,5 +1,5 @@
 """-----------------------------------------------------
-¦    File name: L3_Park_Sensor.py                       ¦
+¦    File name: L2_Park_Sensor.py                       ¦
 ¦    Version: 1.0                                       ¦
 ¦    Author: Jonas Josi                                 ¦
 ¦    Date created: 2024/04/10                           ¦
