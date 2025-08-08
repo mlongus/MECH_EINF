@@ -168,13 +168,13 @@ if __name__ == "__main__":
 
             # Ascending ramp: 0 -> 10 active LEDs
             for active_led in range(LED_BAR_LEDS + 1):
-                ledbar.level(active_led, 64)
+                ledbar.level(active_led)
                 print(".", end="", flush=True)  # Add progress indicator (progress bar)
                 time.sleep(LED_BAR_SWITCH_DELAY)
 
             # Descending ramp: 10 -> 0 active LEDs
             for active_led in range(LED_BAR_LEDS, -1, -1):
-                ledbar.level(active_led, 64)
+                ledbar.level(active_led)
                 print(".", end="", flush=True)  # Add progress indicator (progress bar)
                 time.sleep(LED_BAR_SWITCH_DELAY)
 
