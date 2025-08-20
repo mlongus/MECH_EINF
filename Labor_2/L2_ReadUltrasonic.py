@@ -1,14 +1,17 @@
 """-----------------------------------------------------
 ¦    File name: L2_ReadUltrasonic.py                    ¦
-¦    Version: 1.0                                       ¦
-¦    Author: Jonas Josi                                 ¦
+¦    Version: 1.1                                       ¦
+¦    Authors:                                           ¦
+¦       Jonas Josi                                      ¦
+¦       Matthias Lang                                   ¦
+¦       Christian Hohmann                               ¦
 ¦    Date created: 2024/04/10                           ¦
-¦    Last modified: 2024/04/10                          ¦
-¦    Python Version: 3.7.3                              ¦
+¦    Last modified: 2025/08/20                          ¦
+¦    Python Version: 3.11.2                             ¦
 ------------------------------------------------------"""
 
 # ----------- import external Python module -----------
-import grovepi
+from grove.grove_ultrasonic_ranger import GroveUltrasonicRanger
 
 # ----------- global constant -----------
 ULTRA_SONIC_PORT = 5 # Connect Ultra Sonic Ranger to digital Port D5 on GrovePi
@@ -16,15 +19,14 @@ ULTRA_SONIC_PORT = 5 # Connect Ultra Sonic Ranger to digital Port D5 on GrovePi
 # ----------- global variable -----------
 previous_distance = None # last measured distance in [cm]
 
+
 # ----------- function definition -----------
-def get_ultra_sonic_distance(port, n_measurement=1, return_on_change = False):
+def get_ultra_sonic_distance(n_measurement=1, return_on_change = False):
     """
     Returns the measured distance of the ultrasonic sensor in centimeters.
 
     Parameters
     ----------
-    port : int
-        digital port of GrovePi connected to the ultrasonic sensor.
     n_measurement : int, optional
         Number of measurements to be taken. If greater than 1, the mean value of all measurements is returned.
     return_on_change : bool, optional
@@ -42,7 +44,7 @@ def get_ultra_sonic_distance(port, n_measurement=1, return_on_change = False):
     if n_measurement >= 1:
         # sum the output of n measurement(s)
         for _ in range(n_measurement):
-            distance_sum += grovepi.ultrasonicRead(port)  # get distance from ultra sonic sensor
+            distance_sum += ultrasonic.get_distance()  # get distance from ultra sonic sensor
         _distance = distance_sum / n_measurement # calculate mean value of all n measurements
         _distance = int(round(_distance, 0))
     else:
@@ -56,10 +58,14 @@ def get_ultra_sonic_distance(port, n_measurement=1, return_on_change = False):
 
 # ----------- main code -----------
 if __name__ == "__main__":
+
+    # Initialize Ultrasonic Ranger    
+    ultrasonic = GroveUltrasonicRanger(ULTRA_SONIC_PORT)
+
     try:
         # endless loop
         while True:
-            distance = get_ultra_sonic_distance(ULTRA_SONIC_PORT)
+            distance = get_ultra_sonic_distance()
             if distance:
                 # Print distance value from the Ultrasonic sensor.
                 print(distance, 'cm')
