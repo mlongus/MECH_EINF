@@ -1,6 +1,6 @@
 {
     // Interpreter für Python-Code (Run/Debug/Tests)
-    "python.defaultInterpreterPath": "/opt/venv_mech_lab/bin/python",
+    "python.defaultInterpreterPath": "/opt/.venvs/MECH_LAB/bin/python",
 
     // Standard-Terminalprofil für Linux (Bash mit venv-Aktivierung)
     "terminal.integrated.profiles.linux": {
