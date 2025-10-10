@@ -8,18 +8,20 @@
 ------------------------------------------------------"""
 
 # ----------- import external Python module -----------
-import grovepi
+from grove.adc import ADC
 import time
 
 
 # ----------- global constant -----------
-IR_SENSOR = 0  # Connect the Grove 80cm Infrared Proximity Sensor to analog port A0
+IR_SENSOR = 2  # Connect the Grove 80cm Infrared Proximity Sensor to analog port A0
 
 N_MEASUREMENTS = 200  # number of measurements (of ir sensor) to make, before calculating the average value
 MESUREMENT_INTERVAL = 0.5  # interval time in [s] between two measurements
 
-ADC_REF = 5  # Reference voltage of ADC (which is built-in the GrovePi-Board) is 5 V
-ADC_RES = 1023  # The ADC on the GrovePi-Board has a resolution of 10 bit -> 1024 different digital levels in range of 0-1023
+ADC_REF = 3.3  # Reference voltage of ADC (which is built-in the GrovePi-Board) is 5 V
+ADC_RES = 4095  # The ADC on the GrovePi-Board has a resolution of 10 bit -> 1024 different digital levels in range of 0-1023
+
+adc = ADC() # Create ADC Object once
 
 
 # ----------- function definition -----------
@@ -40,7 +42,7 @@ def read_voltage_ir_sensor(port):
         is returned. Otherwise False is returned.
     """
     try:
-        sensor_value = grovepi.analogRead(port)  # digital value between 0 and 1023 (see constant "ADC_RES")
+        sensor_value = adc.read(port)  # digital value between 0 and 1023 (see constant "ADC_RES")
     except IOError:
         print(f"Error to read analog port {port}: {IOError}")
         return False
@@ -50,8 +52,6 @@ def read_voltage_ir_sensor(port):
 
 # ----------- main code -----------
 if __name__ == "__main__":
-    # initalize infrared sensor (pin)
-    grovepi.pinMode(IR_SENSOR, "INPUT")
 
     while True:
         try:

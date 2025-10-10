@@ -1,14 +1,18 @@
 """-----------------------------------------------------
-¦    File name: L4_Stepmotor_Measurements.py            ¦
+¦    File name: L4_DCmotor.py                           ¦
 ¦    Version: 1.1                                       ¦
-¦    Author: Jonas Josi                                 ¦
-¦    Date created: 2024/04/18                           ¦
-¦    Last modified: 2024/04/18                          ¦
-¦    Python Version: 3.7.3                              ¦
+¦    Authors:                                           ¦
+¦       Jonas Josi                                      ¦
+¦       Matthias Lang                                   ¦
+¦       Christian Hohmann                               ¦
+¦       Joschka Maters                                  ¦
+¦    Date created: 2024/05/01                           ¦
+¦    Last modified: 2025/10/06                          ¦
+¦    Python Version: 3.11.2                             ¦
 ------------------------------------------------------"""
 
 # ----------- import external Python module -----------
-import RPi.GPIO as GPIO
+import lgpio
 import time
 
 # ----------- global constant -----------
@@ -18,11 +22,11 @@ M2 = 21
 M3 = 6
 M4 = 13
 D1 = 26  # enable/disable output pins M1, M2
-D2 = 12  # enable/disable output pins M3, M3
+D2 = 12  # enable/disable output pins M3, M4
 
 # settings of stepper motor and cycles/movement
 STEP_TIME = 0.003  # *** CHANGE ME *** time in [s] between two consecutive steps of stepper motor
-MOVEMENT_STOP_TIME = 1  # *** CHANGE ME ***  Pause [s] between two consecutive movements (up/down) of slide on linear guideway
+MOVEMENT_STOP_TIME = 0  # *** CHANGE ME ***  Pause [s] between two consecutive movements (up/down) of slide on linear guideway
 MOVEMENT_STEP_NUMBER = 2000  # *** CHANGE ME ***  Number of steps to drive the stepper motor per movement of the slide on the linear guideway
 CYCLE_START_DIRECTION = 0  # *** CHANGE ME ***  Direction (0 or 1) of first movement of slide on linear guideway
 CYCLE_NUMBER = 3  # *** CHANGE ME ***  Number of cycles (movement of slide on linear guideway in one direction, followed by movement in the opposite direction)
@@ -40,10 +44,10 @@ def set_motor_coils(coil_1, coil_2, coil_3, coil_4):
     coil_3 : int or GPIO.LOW or GPIO.HIGH
     coil_4 : int or GPIO.LOW or GPIO.HIGH
     """
-    GPIO.output(M1, coil_1)
-    GPIO.output(M2, coil_2)
-    GPIO.output(M3, coil_3)
-    GPIO.output(M4, coil_4)
+    lgpio.gpio_write(gpio0, M1,  coil_1)
+    lgpio.gpio_write(gpio0, M2,  coil_2)
+    lgpio.gpio_write(gpio0, M3,  coil_3)
+    lgpio.gpio_write(gpio0, M4,  coil_4)
 
 
 def busy_sleep(secs):
@@ -70,35 +74,35 @@ def stop_motor():
     Then disable all motor driver output pins (M1, M2, M3, M4).
     """
     # enable motor driver outputs
-    GPIO.output(D1, 1)  # enable output pins M1, M2
-    GPIO.output(D2, 1)  # enable output pins M3, M4
+    lgpio.gpio_write(gpio0, D1,  1)  # enable output pins M1, M2
+    lgpio.gpio_write(gpio0, D2,  1)  # enable output pins M3, M4
 
     # turn off all coils
     set_motor_coils(0, 0, 0, 0)
     busy_sleep(STEP_TIME)
 
     # disable motor driver outputs
-    GPIO.output(D1, 0)  # disable output pins M1, M2
-    GPIO.output(D2, 0)  # disable output pins M3, M4
+    lgpio.gpio_write(gpio0, D1,  0)  # disable output pins M1, M2
+    lgpio.gpio_write(gpio0, D2,  0)  # disable output pins M3, M4
     print("\nMotor stopped")
 
 
 # ----------- main code -----------
 if __name__ == "__main__":
-    # set GPIO pinout mode of Raspberry Pi
-    GPIO.setmode(GPIO.BCM)
+    # initialize lgpio
+    gpio0 = lgpio.gpiochip_open(0) # open GPIO chip 0
 
-    # setup GPIO output pins of Raspberry Pi
-    GPIO.setup(M1, GPIO.OUT)
-    GPIO.setup(M2, GPIO.OUT)
-    GPIO.setup(M3, GPIO.OUT)
-    GPIO.setup(M4, GPIO.OUT)
-    GPIO.setup(D1, GPIO.OUT)
-    GPIO.setup(D2, GPIO.OUT)
+    # initialize all pins to safe stat
+    lgpio.gpio_write(gpio0, M1, 0)
+    lgpio.gpio_write(gpio0, M2, 0)
+    lgpio.gpio_write(gpio0, M3, 0)
+    lgpio.gpio_write(gpio0, M4, 0)
+    lgpio.gpio_write(gpio0, D1, 0)
+    lgpio.gpio_write(gpio0, D2, 0)
 
     # enable motor driver outputs
-    GPIO.output(D1, 1)  # enable output pins M1, M2
-    GPIO.output(D2, 1)  # enable output pins M3, M4
+    lgpio.gpio_write(gpio0, D1,  1)  # enable output pins M1, M2
+    lgpio.gpio_write(gpio0, D2,  1)  # enable output pins M3, M4
 
     """ start measurement """
     try:
@@ -112,6 +116,7 @@ if __name__ == "__main__":
                     # activate coil 2 & coil 4
                     set_motor_coils(0, 1, 0, 1)
                     busy_sleep(STEP_TIME)
+                    
                     step += 1
 
                     if step >= MOVEMENT_STEP_NUMBER:
@@ -175,13 +180,21 @@ if __name__ == "__main__":
                 time.sleep(MOVEMENT_STOP_TIME)
 
         stop_motor()
-        GPIO.cleanup()
+        # Free GPIO pins
+        lgpio.gpio_free(gpio0, M1)
+        lgpio.gpio_free(gpio0, M2)
+        lgpio.gpio_free(gpio0, M3)
+        lgpio.gpio_free(gpio0, M4) # Close the GPIO chip connection
         print("Exit Python")
         exit(0)  # exit python with exit code 0
 
     # detect exception - usually triggered by a user input, stopping the script
     except KeyboardInterrupt:
         stop_motor()
-        GPIO.cleanup()  # release all resources used by RPi.GPIO module and set all GPIO states to default value
+        # Free GPIO pins
+        lgpio.gpio_free(gpio0, M1)
+        lgpio.gpio_free(gpio0, M2)
+        lgpio.gpio_free(gpio0, M3)
+        lgpio.gpio_free(gpio0, M4)  # Close the GPIO chip connection
         print("Exit Python")
         exit(0)  # exit python with exit code 0

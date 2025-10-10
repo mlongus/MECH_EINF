@@ -18,16 +18,16 @@ import lgpio  # library to create hardware-based PWM signals on Raspberry Pi
 # assign motor driver interface to GPIO's of Raspberry Pi
 M3 = 6
 M4 = 13
-PWMB = 12  # enable/disable output pins M1, M2
+PWMB = 12  # GPIO to be pulsed
 
 # settings
-VOLTAGE = 9  # *** CHANGE ME *** voltage for DC motor [V] between 0 und 12 V (Voltage from power supply is always 12 V)
+VOLTAGE = 6 # *** CHANGE ME *** voltage for DC motor [V] between 0 und 12 V (Voltage from power supply is always 12 V)
 DIRECTION = 0  # *** CHANGE ME *** movement direction (0 or 1) of slide on linear guideway
 
 # auxiliary parameters
 MAX_VOLTAGE = 12  # supply voltage of motor driver is 12 V (which equals the max. rated voltage of the DC motor)
-PWM_FREQUENCY = 8000  # Hz
-PWM_DUTYCYCLE = round(VOLTAGE / MAX_VOLTAGE * 100, 3)  # PWM_DUTYCYCLE from 0 (OFF) to 255 bit (FULLY ON)
+PWM_FREQUENCY = 1000  # Hz
+PWM_DUTYCYCLE = round(VOLTAGE / MAX_VOLTAGE * 100, 3)  # PWM_DUTYCYCLE from 0 (OFF) to 100 percent (FULLY ON)
 
 
 # ----------- function definition -----------
@@ -80,7 +80,7 @@ if __name__ == "__main__":
             # set direction: M3 LOW, M4 HIGH  
             lgpio.gpio_write(gpio0, M3, 0)
             lgpio.gpio_write(gpio0, M4, 1)
-            # set PWM signal on D1 (enable pin) for speed control
+            # set PWM signal on PWMB
             lgpio.tx_pwm(gpio0, PWMB, PWM_FREQUENCY, PWM_DUTYCYCLE)            
   
         # Ask for any user input to stop motor / script

@@ -1,13 +1,9 @@
 """-----------------------------------------------------
-¦    File name: L2_ReadUltrasonic.py                       ¦
-¦    Version: 1.1                                       ¦
-¦    Authors:                                           ¦
-¦       Jonas Josi                                      ¦
-¦       Matthias Lang                                   ¦
-¦       Christian Hohmann                               ¦
-¦       Joschka Maters                                  ¦
+¦    File name: L3_ReadUltrasonic.py                    ¦
+¦    Version: 2.0                                       ¦
+¦    Author: Jonas Josi                                 ¦
 ¦    Date created: 2024/04/10                           ¦
-¦    Last modified: 2025/08/20                          ¦
+¦    Last modified: 2025/03/07                          ¦
 ¦    Python Version: 3.11.2                             ¦
 ------------------------------------------------------"""
 

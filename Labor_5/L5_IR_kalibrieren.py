@@ -8,7 +8,7 @@
 ------------------------------------------------------"""
 
 # ----------- import external Python module -----------
-import grovepi
+from grove.adc import ADC
 import csv
 
 
@@ -16,7 +16,7 @@ import csv
 CSV_FILENAME = "Sensorkalibrierung.csv"  # *** CHANGE ME *** file to save calibration data for infrared sensor
 CSV_DELIMITER = ";"  # *** CHANGE ME *** Character to separate data fields / cells in the CSV file
 
-IR_SENSOR = 0  # Connect the Grove 80cm Infrared Proximity Sensor to analog port A0
+IR_SENSOR = 2  # Connect the Grove 80cm Infrared Proximity Sensor to analog port A0
 
 MIN_MEAS_DIST = 25  # minimum measurement distance in [mm]
 MAX_MEAS_DIST = 65  # max measurement distance in [mm]
@@ -24,9 +24,10 @@ INCREMENT_MEAS_DIST = 5  # increment in [mm] of two consecutive measurement dist
 N_MEASUREMENTS = 200  # number of measurements (of ir sensor) to be done for each measurement distance
 N_MEASUREMENTS_CYCLES = 1  # number of measurements cycles (towards, away) from sensor
 
-ADC_REF = 5  # Reference voltage of ADC (which is built-in the GrovePi-Board) is 5 V
-ADC_RES = 1023  # The ADC on the GrovePi-Board has a resolution of 10 bit -> 1024 different digital levels in range of 0-1023
+ADC_REF = 3.3  # Reference voltage of ADC (which is built-in the GrovePi-Board) is 5 V
+ADC_RES = 4095  # The ADC on the GrovePi-Board has a resolution of 10 bit -> 1024 different digital levels in range of 0-1023
 
+adc = ADC() # Create ADC Object once
 
 # ----------- function definition -----------
 def read_voltage_ir_sensor(port):
@@ -46,7 +47,7 @@ def read_voltage_ir_sensor(port):
         is returned. Otherwise False is returned.
     """
     try:
-        sensor_value = grovepi.analogRead(port)  # digital value between 0 and 1023 (see constant "ADC_RES")
+        sensor_value = adc.read(port)  # digital value between 0 and 1023 (see constant "ADC_RES")
     except IOError:
         print(f"Error to read analog port {port}: {IOError}")
         return False
@@ -120,8 +121,6 @@ def add_row_to_csv(filename, row_data, delimiter):
 # ----------- main code -----------
 
 if __name__ == "__main__":
-    # initalize infrared sensor (pin)
-    grovepi.pinMode(IR_SENSOR, "INPUT")
     
     # create csv-file
     if not create_csv_file(CSV_FILENAME):

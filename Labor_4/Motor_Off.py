@@ -1,16 +1,23 @@
-""" Labor 4, Umkehrspiel, MECH_EINF Module WI HSLU T&A
-    author:         Simon van Hemert
-    date:           2020-04-06
-    organization:   HSLU T&A """
+"""-----------------------------------------------------
+¦    File name: L4_DCmotor.py                           ¦
+¦    Version: 1.1                                       ¦
+¦    Authors:                                           ¦
+¦       Jonas Josi                                      ¦
+¦       Matthias Lang                                   ¦
+¦       Christian Hohmann                               ¦
+¦       Joschka Maters                                  ¦
+¦    Date created: 2024/05/01                           ¦
+¦    Last modified: 2025/10/06                          ¦
+¦    Python Version: 3.11.2                             ¦
+------------------------------------------------------"""
 
 ## Import Packages
-import pigpio
+import lgpio
 
 class Motor_Off:
     """ Class to correctly turn of the DC motor oder Stepper motor """
     def turn_motor_off():
         """ Definition to turn of the motor driver channels and drivers """
-        pi1 = pigpio.pi()       # Create an object of class pi
 
         # Set ports and settings
         A1 = 20 	# A  or M1
@@ -21,18 +28,18 @@ class Motor_Off:
         D2 = 26     # N/ -> Turn on the motordriver A A/
 
         # Turn on Motordrivers -> 1
-        pi1.write(D1, 1)
-        pi1.write(D2, 1)
+        lgpio(gpio0, D1, 1)
+        lgpio(gpio0, D2, 1)
 
         # Set channels to 0
-        pi1.write(A1, 0)
-        pi1.write(A2, 0)
-        pi1.write(B1, 0)
-        pi1.write(B2, 0)
+        lgpio(gpio0, A1, 0)
+        lgpio(gpio0, A2, 0)
+        lgpio(gpio0, B1, 0)
+        lgpio(gpio0, B2, 0)
 
         # Turn off Motordrivers -> 0
-        pi1.write(D1, 0)
-        pi1.write(D2, 0)
+        lgpio(gpio0, D1, 0)
+        lgpio(gpio0, D2, 0)
 
         print("Motor turned off")
 
@@ -40,4 +47,5 @@ class Motor_Off:
 # When this program is run
 if __name__ == '__main__':
     # run defined method to turn of the motor
+    gpio0 = lgpio.gpiochip_open(0)  # Open GPIO chip 0
     Motor_Off.turn_motor_off()

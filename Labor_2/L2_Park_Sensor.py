@@ -5,6 +5,7 @@
 ¦       Jonas Josi                                      ¦
 ¦       Matthias Lang                                   ¦
 ¦       Christian Hohmann                               ¦
+¦       Joschka Maters                                  ¦
 ¦    Date created: 2024/04/10                           ¦
 ¦    Last modified: 2025/08/20                          ¦
 ¦    Python Version: 3.11.2                             ¦
@@ -16,8 +17,11 @@ import grove
 from grove.gpio import GPIO
 from grove.grove_ultrasonic_ranger import GroveUltrasonicRanger
 
+
 # ----------- global constant -----------
 ULTRA_SONIC_PORT = 5  # Connect Ultra Sonic Ranger to digital Port D5 on GrovePi
+ULTRASONIC_UPDATE_INTERVAL = 0.1  # Delay in seconds [s] between two consecutive distance measurements
+ULTRASONIC_UPDATE_ON_CHANGE = False  # Only update the distance when the measured distance has changed
 LED_BAR_PORT = 18  # Connect LED bar to digital Port D18 on GrovePi
 LED_BAR_LEVELS = 10  # Number of LEDs on LED bar
 LED_BAR_DIST_MAX_LEVEL = 40  # Distance in [cm], represented by all leds on the LED bar lighting up
@@ -129,39 +133,34 @@ class GroveLedBar(object):
 
 
 # ----------- function definition -----------
-def get_ultra_sonic_distance(n_measurement=1, return_on_change = False):
+def get_ultra_sonic_distance(sensor, n_measurements=1):
     """
-    Returns the measured distance of the ultrasonic sensor in centimeters.
+    Return the measured distance of the ultrasonic sensor in centimeters [cm].
 
     Parameters
     ----------
-    n_measurement : int, optional
-        Number of measurements to be taken. If greater than 1, the mean value of all measurements is returned.
-    return_on_change : bool, optional
-        If True, the function only returns a value if the measured distance differs from the last measured distance.
+    sensor : GroveUltrasonicRanger
+        object of ultrasonic sensor
+    n_measurements : int, optional
+        Number of measurements to be taken.
 
     Returns
     -------
-    int or None
-        The measured distance in centimeters, or None if return_on_change is True and the distance has not changed.
+    int
+        Measured distance in centimeters [cm]. If n_measurements > 1, the rounded mean value of all measurements is returned.
     """
-
     distance_sum = 0
-    n_measurement = int(n_measurement)
+    n_measurements = int(n_measurements)
 
-    if n_measurement >= 1:
-        # sum the output of n measurement(s)
-        for _ in range(n_measurement):
-            distance_sum += ultrasonic.get_distance()  # get distance from ultra sonic sensor
-        _distance = distance_sum / n_measurement # calculate mean value of all n measurements
-        _distance = int(round(_distance, 0))
+    if n_measurements >= 1:
+        # Sum the output of n measurement(s)
+        for _ in range(n_measurements):
+            distance_sum += sensor.get_distance()  # Get distance from ultrasonic sensor
+        average_distance = distance_sum / n_measurements  # Calculate mean value of all n measurements
+        average_distance = int(round(average_distance, 0)) # Convert the averaged distance to a whole number
     else:
-        _distance = grovepi.ultrasonicRead(port)  # get distance from ultra sonic sensor
-
-    if return_on_change and _distance == previous_distance:
-        return
-    else:
-        return _distance
+        average_distance = sensor.get_distance()  # Get distance from ultrasonic sensor
+    return average_distance
 
 
 # ----------- main code -----------
@@ -172,15 +171,37 @@ if __name__ == "__main__":
     ultrasonic = GroveUltrasonicRanger(ULTRA_SONIC_PORT)
 
     try:
+        previous_distance = None  
         # endless loop
         while True:
+
+            new_distance = get_ultra_sonic_distance(ultrasonic)
+
+            if ULTRASONIC_UPDATE_ON_CHANGE:
+                if new_distance != previous_distance:
+                    previous_distance = new_distance
+                    print(previous_distance, 'cm')
+                    print("here")
+
+            else:
+                previous_distance = new_distance
+                led_level = LED_BAR_LEVELS - int(min(LED_BAR_LEVELS / LED_BAR_DIST_MAX_LEVEL * previous_distance, LED_BAR_LEVELS))
+                # Print distance value from the Ultrasonic sensor and level of led bar
+                print(previous_distance, 'cm', "--->", led_level, "LEDs")
+                ledbar.level(led_level)
+                #previous_distance = distance
+                #print(previous_distance, 'cm')
+                
+            time.sleep(ULTRASONIC_UPDATE_INTERVAL)
+
+            """time.sleep(ULTRASONIC_UPDATE_INTERVAL)
             distance = get_ultra_sonic_distance(5, True)
             if distance:
                 led_level = LED_BAR_LEVELS - int(min(LED_BAR_LEVELS / LED_BAR_DIST_MAX_LEVEL * distance, LED_BAR_LEVELS))
                 # Print distance value from the Ultrasonic sensor and level of led bar
                 print(distance, 'cm', "--->", led_level, "LEDs")
                 ledbar.level(led_level)
-                previous_distance = distance
+                previous_distance = distance"""
     except KeyboardInterrupt:
         # Turn off LED bar
         ledbar.level(0)

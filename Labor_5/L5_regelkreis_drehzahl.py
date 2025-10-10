@@ -8,8 +8,8 @@
 ------------------------------------------------------"""
 
 # ----------- import external Python module -----------
-import pigpio  # library to create hardware-based PWM signals on Raspberry Pi
-import grovepi
+from grove.adc import ADC
+import lgpio
 import os
 import re
 import csv
@@ -18,26 +18,28 @@ import time
 
 # ----------- global constant -----------
 """ Settings """
-k = 5  # *** CHANGE ME *** controller amplification factor k [mm^-1]
+k = 2  # *** CHANGE ME *** controller amplification factor k [mm^-1]
 N_MEASUREMENTS = 10  # *** CHANGE ME *** number of distance measurements [] over which to average
 DRIVETIME = 0.1  # *** CHANGE ME *** time in [s] to drive the motor with a specific voltage before recalculate the voltage
 OFFSET_DUTYCYCLE = 10  # *** CHANGE ME *** value [dmnl] to add to calculated duty_cycle of controller. This prevents that the motor is driven by a voltage which is to small to rotate the motor shaft.
 CSV_FILENAME = "Wegdiagramm_Drehzahl.csv"  # *** CHANGE ME *** file to log data (timestamp and distance)
 CSV_DELIMITER = ";"  # *** CHANGE ME *** Character to separate data fields / cells in the CSV file
 
-IR_SENSOR = 0  # Connect the Grove 80cm Infrared Proximity Sensor to analog port A0
+IR_SENSOR = 2  # Connect the Grove 80cm Infrared Proximity Sensor to analog port A0
 
 # assign motor driver interface to GPIO's of Raspberry Pi
-M1 = 20
-M2 = 21
-D1 = 26  # enable/disable output pins M1, M2
+M3 = 6
+M4 = 13
+PWMB = 12  # enable/disable output pins M1, M2
 
-ADC_REF = 5  # Reference voltage of ADC (which is built-in the GrovePi-Board) is 5 V
-ADC_RES = 1023  # The ADC on the GrovePi-Board has a resolution of 10 bit -> 1024 different digital levels in range of 0-1023
+ADC_REF = 3.3  # Reference voltage of ADC (which is built-in the GrovePi-Board) is 5 V
+ADC_RES = 4095  # The ADC on the GrovePi-Board has a resolution of 10 bit -> 1024 different digital levels in range of 0-1023
+
+adc = ADC()
 
 # auxiliary parameters
 MAX_VOLTAGE = 12  # supply voltage of motor driver is 12 V (which equals the max. rated voltage of the DC motor)
-PWM_FREQUENCY = 4000  # Hz
+PWM_FREQUENCY = 1000  # Hz
 
 
 # ----------- function definition -----------
@@ -46,15 +48,12 @@ def stop_motor():
     Set state of both output pins of the motor driver (M1, M2) to LOW (0 V).
     Then disable the motor driver output pins (M1, M2).
     """
-    # enable motor driver output pins (M1 and M2)
-    pi1.write(D1, 1)
-
     # set state of motor driver outputs (M1 and M2) to low (0 V)
-    pi1.write(M1, 0)
-    pi1.write(M2, 0)
+    lgpio.gpio_write(gpio0, M3, 0)
+    lgpio.gpio_write(gpio0, M4, 0)
 
-    # disable motor driver output pins (M1 and M2)
-    pi1.write(D1, 0)
+    # disable motor driver by setting PWM duty cycle to 0%
+    lgpio.tx_pwm(gpio0, PWMB, PWM_FREQUENCY, 0)
 
     print("\nMotor stopped")
 
@@ -147,7 +146,7 @@ def read_voltage_ir_sensor(port):
         is returned. Otherwise False is returned.
     """
     try:
-        sensor_value = grovepi.analogRead(port)  # digital value between 0 and 1023 (see constant "ADC_RES")
+        sensor_value = adc.read(port)  # digital value between 0 and 1023 (see constant "ADC_RES")
     except IOError:
         print(f"Error to read analog port {port}: {IOError}")
         return False
@@ -157,16 +156,18 @@ def read_voltage_ir_sensor(port):
 
 # ----------- main code -----------
 if __name__ == "__main__":
-    # initialize pigpio
-    pi1 = pigpio.pi()  # Create an Object of class pigpio.pi
-    # enable motor driver output pins (M1 and M2)
-    pi1.write(D1, 1)
-    # set pwm frequencies of driver output pins (M1 and M2)
-    pi1.set_PWM_frequency(M1, PWM_FREQUENCY)
-    pi1.set_PWM_frequency(M2, PWM_FREQUENCY)
+    # initialize lgpio
+    gpio0 = lgpio.gpiochip_open(0)  # Open GPIO chip 0
 
-    # initalize infrared sensor (pin)
-    grovepi.pinMode(IR_SENSOR, "INPUT")
+    # Configure GPIO pins as outputs
+    lgpio.gpio_claim_output(gpio0, M3)
+    lgpio.gpio_claim_output(gpio0, M4) 
+    lgpio.gpio_claim_output(gpio0, PWMB)
+    
+    # Initialize all pins to safe state
+    lgpio.gpio_write(gpio0, M3, 0)
+    lgpio.gpio_write(gpio0, M4, 0)
+    lgpio.tx_pwm(gpio0, PWMB, PWM_FREQUENCY, 0)  # PWM at 0% initially
 
     # Ask user for the Set-distance
     valid_userinput = False
@@ -223,7 +224,7 @@ if __name__ == "__main__":
             average_voltage = sum_voltage / N_MEASUREMENTS
 
             # Calculate distance using sensor characteristics, coefficients found from calibration (L5_IR_kalibrieren.py)
-            distance = round(44.593 * average_voltage * average_voltage - 152.73 * average_voltage + 159.38, 2)
+            distance = round(634.24 * average_voltage * average_voltage - 545.7 * average_voltage + 142.5, 2)
 
             if start_timestamp:
                 time_elapsed = round(time.time() - start_timestamp, 3)
@@ -240,12 +241,13 @@ if __name__ == "__main__":
             # calculate speed to drive the motor
             speed = delta_distance * k
             pwm_dutycycle = int(round(abs(speed) + OFFSET_DUTYCYCLE, 0))
+            print(pwm_dutycycle)
 
             # make sure that the pwm dutycycle is within range 0-255 (8 Bit)
             if pwm_dutycycle < 0:
                 pwm_dutycycle = 0
-            if pwm_dutycycle > 255:
-                pwm_dutycycle = 255
+            if pwm_dutycycle > 100:
+                pwm_dutycycle = 100
 
             print(f"ist: {distance} mm, soll: {set_distance} mm -> delta_dist: {round(delta_distance, 4)} mm -> speed: {round(speed, 4)}")
 
@@ -257,19 +259,25 @@ if __name__ == "__main__":
 
             # drive motor with calculated speed/voltage for constant drivetime
             if direction == 0:
-                # set output "M2" on motor driver to low (0 V)
-                pi1.write(M2, 0)
-                # set duty cycle of PWM signal on output "M1"
-                pi1.set_PWM_dutycycle(M1, pwm_dutycycle)
+                 # set direction: M3 HIGH, M4 LOW
+                lgpio.gpio_write(gpio0, M3, 1)
+                lgpio.gpio_write(gpio0, M4, 0)
+                # set PWM signal 
+                lgpio.tx_pwm(gpio0, PWMB, PWM_FREQUENCY, pwm_dutycycle)
             elif direction == 1:
-                # set output "M1" on motor driver to low (0 V)
-                pi1.write(M1, 0)
-                # set duty cycle of PWM signal on output "M2"
-                pi1.set_PWM_dutycycle(M2, pwm_dutycycle)
+                 # set direction: M3 HIGH, M4 LOW
+                lgpio.gpio_write(gpio0, M3, 0)
+                lgpio.gpio_write(gpio0, M4, 1)
+                # set PWM signal 
+                lgpio.tx_pwm(gpio0, PWMB, PWM_FREQUENCY, pwm_dutycycle)
             time.sleep(DRIVETIME)
         except KeyboardInterrupt:
             stop_motor()
-            pi1.stop()  # Terminate the connection to the pigpiod instance and release resources
+            # Free GPIO pins
+            lgpio.gpio_free(gpio0, M3)
+            lgpio.gpio_free(gpio0, M4)
+            lgpio.gpio_free(gpio0, PWMB)
+            lgpio.gpiochip_close(gpio0)  # Close the GPIO chip connection
             print("\n " + "*" * 5 + f" Measurement stopped. Data saved to Log-File: {filename} " + "*" * 5 + "\n ")
             print("Exit Python")
             exit(0)  # exit python with exit code 0
