@@ -1,5 +1,5 @@
 """-----------------------------------------------------
-¦    File name: L4_DCmotor.py                           ¦
+¦    File name: L4_Stepmotor_Measurements.py            ¦
 ¦    Version: 1.1                                       ¦
 ¦    Authors:                                           ¦
 ¦       Jonas Josi                                      ¦
@@ -7,7 +7,7 @@
 ¦       Christian Hohmann                               ¦
 ¦       Joschka Maters                                  ¦
 ¦    Date created: 2024/05/01                           ¦
-¦    Last modified: 2025/10/06                          ¦
+¦    Last modified: 2025/10/27                          ¦
 ¦    Python Version: 3.11.2                             ¦
 ------------------------------------------------------"""
 
