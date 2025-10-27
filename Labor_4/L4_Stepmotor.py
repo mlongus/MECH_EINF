@@ -1,5 +1,5 @@
 """-----------------------------------------------------
-¦    File name: L4_DCmotor.py                           ¦
+¦    File name: L4_Stepmotor.py                         ¦
 ¦    Version: 1.1                                       ¦
 ¦    Authors:                                           ¦
 ¦       Jonas Josi                                      ¦
